@@ -6,3 +6,4 @@ RUN conda install conda=4.5.11
 COPY environment.yml /
 RUN conda env create -f environment.yml
 ENV PATH /opt/conda/envs/RNAseq_nf/bin:$PATH
+RUN Rscript install.R
