@@ -50,7 +50,6 @@ Channel
 * Trimming quality and adapters with fastp
 */
 process fastp {
-    container 'jhayer/rnaseq_nf'
     publishDir params.output, mode: 'copy'
 
     input:
@@ -61,30 +60,31 @@ process fastp {
 
     script:
         """
-        fastp -i $read1 -o ${id}_R1_trimmed.fastq -I $read2 -O ${id}_R2_trimmed.fastq --detect_adapter_for_pe --qualified_quality_phred 30 --cut_by_quality5 --cut_by_quality3 --cut_mean_quality 30 --html ${id}_fastp_report.html
+        fastp -i $read1 -o ${id}_R1_trimmed.fastq -I $read2 -O ${id}_R2_trimmed.fastq \
+            --detect_adapter_for_pe --qualified_quality_phred 30 \
+            --cut_by_quality5 --cut_by_quality3 --cut_mean_quality 30 \
+            --html ${id}_fastp_report.html
         """
 }
 trimmed.into {trimmed_reads_pe ; trimmed_pe_trinity ; trimmed_pe_salmon}
 
 process fastqc {
+
     input:
-    //file reads from trimmed_reads_pe.merge(read_pairs_multiqc_raw)
-        file raw_reads from read_pairs_multiqc_raw
-    //    file trimmed_reads from trimmed_reads_pe
+        set val(id), file(read1), file(read2) from read_pairs_multiqc_raw
+        set val(id), file(trimmed_read1), file(trimmed_read2) from trimmed_reads_pe
 
     output:
         file "*_fastqc.{zip,html}" into fastqc_results
 
     script:
         """
-        fastqc -t 4 $reads
+        fastqc -t 4 $read1 $read2 $trimmed_read1 $trimmed_read2
         """
 }
 
 process multiqc {
-//    container 'ewels/multiqc'
-    publishDir 'multiqc_results', mode: 'copy'
-
+    publishDir params.output, mode: 'copy'
     input:
         file 'fastqc/*' from fastqc_results.collect()
 
