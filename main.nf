@@ -19,22 +19,19 @@ params.name = false
 params.project = false
 params.readsPath = false
 params.output = 'results'
+params.ref = false
 
-//params.genome = false
 
-
-// // Validate inputs
-// if ( params.fasta ){
-//     fasta = file(params.fasta)
-//     if( !fasta.exists() ) exit 1, "Fasta file not found: ${params.fasta}"
-// }
-// else {
-//     exit 1, "No reference genome specified!"
-// }
-//
-//
-// // The reference genome file 
-// genome_file = file(params.genome)
+// Validate inputs
+if ( params.ref ){
+    fasta = file(params.ref)
+    if( !fasta.exists() ) exit 1, "Fasta file not found: ${params.ref}"
+}
+else {
+    exit 1, "No reference transcriptome specified!"
+}
+// The reference genome file 
+transcriptome_file = file(params.ref)
 
 
 /*
@@ -50,8 +47,7 @@ Channel
 * Trimming quality and adapters with fastp
 */
 process fastp {
-    publishDir params.output, mode: 'copy'
-
+    publishDir "$params.output/qc", mode: 'copy'
     input:
         set val(id), file(read1), file(read2) from read_pairs_fastp_raw
 
@@ -69,7 +65,6 @@ process fastp {
 trimmed.into {trimmed_reads_pe ; trimmed_pe_trinity ; trimmed_pe_salmon}
 
 process fastqc {
-
     input:
         set val(id), file(read1), file(read2) from read_pairs_multiqc_raw
         set val(id), file(trimmed_read1), file(trimmed_read2) from trimmed_reads_pe
@@ -84,7 +79,7 @@ process fastqc {
 }
 
 process multiqc {
-    publishDir params.output, mode: 'copy'
+    publishDir "$params.output/qc", mode: 'copy'
     input:
         file 'fastqc/*' from fastqc_results.collect()
 
@@ -95,4 +90,21 @@ process multiqc {
         """
         multiqc .
         """
+}
+
+process salmon {
+    publishDir params.output, mode: 'copy'
+    input:
+        file fasta from transcriptome_file
+        set val(id), file(trimmed_read1), file(trimmed_read2) from trimmed_pe_salmon
+
+    output:
+        file("salmon/${id}") into salmon_quant
+
+    script:
+    """
+    salmon index -t $fasta -i punivalens_trans_index
+    salmon quant -i punivalens_trans_index --libType A \
+          -1 ${trimmed_read1} -2 ${trimmed_read2} -o salmon/${id}
+    """
 }
