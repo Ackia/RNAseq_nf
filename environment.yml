@@ -9,3 +9,4 @@ dependencies:
     - multiqc=1.6
     - fastp=0.19.5
     - r=3.5.1
+    - mysql
