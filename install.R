@@ -1,5 +1,7 @@
 #!/usr/bin/env Rscript
-source("https://bioconductor.org/biocLite.R")
-biocLite()
-biocLite("DESeq2")
-biocLite("tximport")
+repo='https://ftp.acc.umu.se/mirror/CRAN/'
+install.packages("RMySQL", repos=repo)
+install.packages("BiocManager", repos=repo)
+BiocManager::install("GenomicFeatures")
+BiocManager::install("DESeq2")
+BiocManager::install("tximport")
