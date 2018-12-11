@@ -23,6 +23,7 @@ params.ref = false
 params.gff = false
 params.samples = false
 params.trim_qual = 20
+params.libtype = "A"
 
 
 // Validate inputs
@@ -127,7 +128,7 @@ process salmon {
     script:
     """
     salmon index -t $fasta -i punivalens_trans_index
-    salmon quant -i punivalens_trans_index --libType A \
+    salmon quant -i punivalens_trans_index --libType $params.libtype \
           -1 ${trimmed_read1} -2 ${trimmed_read2} -o salmon/${id}
     """
 }
@@ -137,7 +138,7 @@ process deseq2 {
     input:
         file gff from gff_file
         file samples_cond from samples_file
-        set val(id), file(quant) from salmon_quant
+        file(quant) from salmon_quant
 
     output:
         file("deseq2/") into deseq2
@@ -153,12 +154,13 @@ process deseq2 {
     # importing annotation from the gff3 file
     txdb <- makeTxDbFromGFF($gff)
     k <- keys(txdb, keytype = "GENEID")
-    tx2gene <- select(txdb, keys = k, keytype = "GENEID", columns = "TXNAME")
+    df <- select(txdb, keys = k, columns = "TXNAME", keytype = "GENEID")
+    tx2gene <- df[, 2:1]
 
     # importing Salmon count data using tximport
-    samples <- read.table('$samples_cond', header = TRUE)
-    files <- file.path("salmon", samples$sample, "quant.sf")
-    names(files) <- paste0(samples$sample)
+    samples <- read.table($samples_cond, header = TRUE)
+    files <- file.path("salmon", samples\$sample, "quant.sf")
+    names(files) <- paste0(samples\$sample)
     txi.salmon <- tximport(files, type = "salmon", tx2gene = tx2gene)
 
     # DESeq2
