@@ -136,8 +136,8 @@ process salmon {
 process deseq2 {
     publishDir params.output, mode: 'copy'
     input:
-        file gff from gff_file
-        file samples_cond from samples_file
+        file(gff) from gff_file
+        file(samples_cond) from samples_file
         file(quant) from salmon_quant
 
     output:
@@ -152,14 +152,14 @@ process deseq2 {
     library(readr)
 
     # importing annotation from the gff3 file
-    txdb <- makeTxDbFromGFF($gff)
+    txdb <- makeTxDbFromGFF("$gff")
     k <- keys(txdb, keytype = "GENEID")
     df <- select(txdb, keys = k, columns = "TXNAME", keytype = "GENEID")
     tx2gene <- df[, 2:1]
 
     # importing Salmon count data using tximport
-    samples <- read.table($samples_cond, header = TRUE)
-    files <- file.path("salmon", samples\$sample, "quant.sf")
+    samples <- read.table("$samples_cond", header = TRUE)
+    files <- file.path("$quant", samples\$sample, "quant.sf")
     names(files) <- paste0(samples\$sample)
     txi.salmon <- tximport(files, type = "salmon", tx2gene = tx2gene)
 
