@@ -138,9 +138,9 @@ process deseq2 {
     input:
         file(gff) from gff_file
         file(samples_cond) from samples_file
-        file(quant) from salmon_quant
-
-    output:
+        file(quant) from salmon_quant.collect()
+   
+   output:
         file("deseq2/") into deseq2
 
     script:
@@ -159,18 +159,20 @@ process deseq2 {
 
     # importing Salmon count data using tximport
     samples <- read.table("$samples_cond", header = TRUE)
-    files <- file.path("$quant", samples\$sample, "quant.sf")
+    files <- file.path(".", samples\$sample, "quant.sf")
     names(files) <- paste0(samples\$sample)
     txi.salmon <- tximport(files, type = "salmon", tx2gene = tx2gene)
 
     # DESeq2
     library(DESeq2)
-    dds <- DESeqDataSetFromTximport(txi.salmon, samples, ~condition)
+    dds <- DESeqDataSetFromTximport(txi.salmon, samples, ~drug)
+
     dds <- DESeq(dds)
     res <- results(dds)
 
     sum <- summary(res)
     capture.output(sum, file = "res_summary.txt")
+    capture.output(res, file = "deseq_results.txt")
 
     """
 }
