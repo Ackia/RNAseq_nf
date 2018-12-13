@@ -141,7 +141,8 @@ process deseq2 {
         file(quant) from salmon_quant.collect()
    
    output:
-        file("deseq2/") into deseq2
+        file("res_summary.txt") into deseq2_summary
+        file("deseq_results.txt") into deseq2_results
 
     script:
     """
