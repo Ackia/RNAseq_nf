@@ -20,8 +20,6 @@ params.project = false
 params.readsPath = false
 params.output = 'results'
 params.ref = false
-params.gff = false
-params.samples = false
 params.trim_qual = 20
 params.libtype = "A"
 
@@ -34,29 +32,11 @@ if ( params.ref ){
 else {
     exit 1, "No reference transcriptome specified!"
 }
-if ( params.gff ){
-    gff = file(params.gff)
-    if( !gff.exists() ) exit 1, "GFF file not found: ${params.gff}"
-}
-else {
-    exit 1, "No genome annotation file (GFF3) specified!"
-}
-if ( params.samples ){
-    samples = file(params.samples)
-    if( !samples.exists() ) exit 1, "Samples file not found: ${params.samples}"
-}
-else {
-    exit 1, "No samples/conditions tab file specified!"
-}
+
 
 
 // The reference genome file 
 transcriptome_file = file(params.ref)
-// the annotation file
-gff_file = file(params.gff)
-// samples and conditions file
-samples_file = file(params.samples)
-
 
 /*
  * Creates the `read_pairs` channel that emits for each read-pair a tuple containing
@@ -130,50 +110,5 @@ process salmon {
     salmon index -t $fasta -i punivalens_trans_index
     salmon quant -i punivalens_trans_index --libType $params.libtype \
           -1 ${trimmed_read1} -2 ${trimmed_read2} -o salmon/${id}
-    """
-}
-
-process deseq2 {
-    publishDir params.output, mode: 'copy'
-    input:
-        file(gff) from gff_file
-        file(samples_cond) from samples_file
-        file(quant) from salmon_quant.collect()
-   
-   output:
-        file("res_summary.txt") into deseq2_summary
-        file("deseq_results.txt") into deseq2_results
-
-    script:
-    """
-    #!/usr/bin/env Rscript
-
-    library(tximport)
-    library(GenomicFeatures)
-    library(readr)
-
-    # importing annotation from the gff3 file
-    txdb <- makeTxDbFromGFF("$gff")
-    k <- keys(txdb, keytype = "GENEID")
-    df <- select(txdb, keys = k, columns = "TXNAME", keytype = "GENEID")
-    tx2gene <- df[, 2:1]
-
-    # importing Salmon count data using tximport
-    samples <- read.table("$samples_cond", header = TRUE)
-    files <- file.path(".", samples\$sample, "quant.sf")
-    names(files) <- paste0(samples\$sample)
-    txi.salmon <- tximport(files, type = "salmon", tx2gene = tx2gene)
-
-    # DESeq2
-    library(DESeq2)
-    dds <- DESeqDataSetFromTximport(txi.salmon, samples, ~drug)
-
-    dds <- DESeq(dds)
-    res <- results(dds)
-
-    sum <- summary(res)
-    capture.output(sum, file = "res_summary.txt")
-    capture.output(res, file = "deseq_results.txt")
-
     """
 }
