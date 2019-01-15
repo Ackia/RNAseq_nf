@@ -20,7 +20,7 @@ params.project = false
 params.readsPath = false
 params.output = 'results'
 params.ref = false
-params.trim_qual = 20
+params.trim_qual = 10
 params.libtype = "A"
 
 
@@ -63,7 +63,7 @@ process fastp {
         fastp -i $read1 -o ${id}_R1_trimmed.fastq -I $read2 -O ${id}_R2_trimmed.fastq \
             --detect_adapter_for_pe --qualified_quality_phred $params.trim_qual \
             --cut_by_quality5 --cut_by_quality3 --cut_mean_quality $params.trim_qual \
-            --html ${id}_fastp_report.html
+            --html ${id}_fastp_report.html --length_required 35 
         """
 }
 trimmed.into {trimmed_reads_pe ; trimmed_pe_trinity ; trimmed_pe_salmon}
